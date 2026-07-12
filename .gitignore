@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+.env
+profile.yaml
+
+data/
+exports/
+output/
+*.db
+
+.DS_Store
+.vscode/
+.idea/

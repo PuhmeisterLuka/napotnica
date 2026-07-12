@@ -1,0 +1,49 @@
+name: Ana Novak
+contact:
+  email: ana.novak@example.com
+  phone: "+386 40 123 456"
+  location: Maribor, Slovenia
+  github: https://github.com/ananovak
+languages:
+  - name: Slovenian
+    level: Native
+  - name: English
+    level: C1
+  - name: German
+    level: B1
+education:
+  - school: University of Maribor, FERI
+    program: Computer Science and Information Technologies (BSc)
+    years: 2022-present
+experience:
+  - role: Student software developer
+    company: Kodni Atelje
+    years: 2024-2025
+    bullets:
+      - Built internal Flask tools for a small logistics team
+      - Wrote integration tests that cut regression bugs before release
+  - role: IT support intern
+    company: OpenSchool Maribor
+    years: 2023
+    bullets:
+      - Handled first-line support tickets for staff and students
+      - Documented recurring fixes into a shared knowledge base
+projects:
+  - name: Napotnica
+    stack: [Python, Flask, Playwright, SQLite]
+    bullets:
+      - Local tool that collects public student job ads and scores them against a profile
+      - Generates a tailored one-page CV and a short cover note per listing
+  - name: MangaShelf
+    stack: [Python, SQLite, Tkinter]
+    bullets:
+      - Desktop reading tracker with a local database and simple UI
+skills:
+  - Python
+  - Flask
+  - SQLite
+  - Playwright
+  - Git
+  - pytest
+  - Linux
+cv_language: sl
