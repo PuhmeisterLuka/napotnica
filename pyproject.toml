@@ -30,3 +30,4 @@ markers = [
     "scrape: tests that need a live browser or network (excluded by default)",
 ]
 testpaths = ["tests"]
+pythonpath = ["."]
