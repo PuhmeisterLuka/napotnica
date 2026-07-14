@@ -9,9 +9,10 @@ from app.scraper import scrape
 
 @pytest.mark.scrape
 def test_scrape_one_page():
-    listings = scrape(max_pages=1)
-    assert listings, "expected at least one live listing"
-    first = listings[0]
+    result = scrape(max_pages=1)
+    assert result.listings, "expected at least one live listing"
+    assert result.pages_scraped == 1
+    first = result.listings[0]
     assert first.source_id.isdigit()
     assert first.title
     assert first.url.startswith("https://")

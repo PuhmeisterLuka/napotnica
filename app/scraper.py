@@ -47,6 +47,13 @@ class Listing:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class ScrapeResult:
+    listings: list["Listing"]
+    pages_scraped: int
+    reached_end: bool  # True if we saw the last page; False if capped by max_pages
+
+
 # --------------------------------------------------------------------------- #
 # Minimal DOM: enough to find elements by tag/class and read their text.
 # --------------------------------------------------------------------------- #
@@ -226,8 +233,8 @@ def detect_max_page(html: str) -> int:
 def scrape(
     base_url: Optional[str] = None,
     max_pages: Optional[int] = None,
-    on_page: Optional[Callable[[int, int], None]] = None,
-) -> list[Listing]:
+    on_page: Optional[Callable[[int, list["Listing"]], None]] = None,
+) -> ScrapeResult:
     """Fetch listings across pages, politely, and return unique Listing records.
 
     Single browser context, sequential navigation, a random 1.5-3s pause between
@@ -241,6 +248,8 @@ def scrape(
     list_url = f"{base_url}{LISTINGS_PATH}"
     results: list[Listing] = []
     seen: set[str] = set()
+    pages_scraped = 0
+    reached_end = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -249,29 +258,97 @@ def scrape(
             for n in range(1, max_pages + 1):
                 page.goto(f"{list_url}?page={n}", wait_until="networkidle", timeout=60000)
                 html = page.content()
+                pages_scraped = n
                 page_listings = parse_listing_page(html, base_url)
                 if not page_listings:
+                    reached_end = True
                     break
                 fresh = [l for l in page_listings if l.source_id not in seen]
                 for l in fresh:
                     seen.add(l.source_id)
                 results.extend(fresh)
                 if on_page:
-                    on_page(n, len(fresh))
+                    on_page(n, fresh)
                 if n >= detect_max_page(html):
+                    reached_end = True
                     break
                 time.sleep(random.uniform(1.5, 3.0))
         finally:
             browser.close()
-    return results
+    return ScrapeResult(listings=results, pages_scraped=pages_scraped, reached_end=reached_end)
+
+
+def run_scrape(
+    db_path=None,
+    base_url: Optional[str] = None,
+    max_pages: Optional[int] = None,
+    on_page: Optional[Callable[[int, int], None]] = None,
+) -> dict:
+    """Scrape and persist through the repo, recording the run in scrape_runs.
+
+    Deactivation of unseen jobs only happens when the pass reached the last page,
+    so a run capped by SCRAPE_MAX_PAGES never wrongly retires jobs it never looked at.
+    """
+    from . import db as db_mod
+    from . import repo
+
+    conn = db_mod.get_db(db_path)
+    repo.fail_stale_runs(conn, db_mod.now_iso())  # retire runs a hard kill left 'running'
+    run_id = repo.record_scrape_start(conn, db_mod.now_iso())
+    conn.commit()
+
+    seen_ids: list[str] = []
+    new_total = 0
+    pages_done = 0
+
+    def _persist_page(page_num: int, page_listings: list[Listing]) -> None:
+        nonlocal new_total, pages_done
+        pages_done = page_num
+        now = db_mod.now_iso()
+        page_new = 0
+        for listing in page_listings:
+            if repo.upsert_job(conn, listing, now):
+                page_new += 1
+            seen_ids.append(listing.source_id)
+        new_total += page_new
+        if on_page:
+            on_page(page_num, page_new)  # genuinely new rows, not just parsed
+
+    try:
+        result = scrape(base_url, max_pages, on_page=_persist_page)
+    except BaseException as exc:  # includes KeyboardInterrupt / SystemExit
+        repo.record_scrape_finish(
+            conn, run_id, status="failed", pages=pages_done,
+            jobs_found=len(seen_ids), jobs_new=new_total,
+            error=str(exc) or type(exc).__name__, now=db_mod.now_iso(),
+        )
+        conn.commit()
+        conn.close()
+        raise
+
+    if result.reached_end:
+        repo.deactivate_missing(conn, seen_ids)
+    repo.record_scrape_finish(
+        conn, run_id, status="ok", pages=result.pages_scraped,
+        jobs_found=len(seen_ids), jobs_new=new_total, error=None, now=db_mod.now_iso(),
+    )
+    conn.commit()
+    conn.close()
+    return {
+        "run_id": run_id,
+        "pages": result.pages_scraped,
+        "found": len(seen_ids),
+        "new": new_total,
+        "reached_end": result.reached_end,
+    }
 
 
 def _main() -> None:
-    listings = scrape(on_page=lambda n, c: print(f"page {n}: {c} new listings", file=sys.stderr))
-    print(f"scraped {len(listings)} listings", file=sys.stderr)
-    for l in listings[:5]:
-        pay = f"{l.pay_eur_hr:.2f} EUR/h" if l.pay_eur_hr is not None else (l.pay_raw or "-")
-        print(f"  [{l.source_id}] {l.title} | {l.location or '-'} | {pay}")
+    summary = run_scrape(on_page=lambda n, c: print(f"page {n}: {c} new listings", file=sys.stderr))
+    print(
+        f"run {summary['run_id']}: scraped {summary['found']} listings across "
+        f"{summary['pages']} page(s), {summary['new']} new"
+    )
 
 
 if __name__ == "__main__":
