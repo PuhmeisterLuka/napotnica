@@ -70,6 +70,53 @@ def get_job(conn: sqlite3.Connection, job_id: int) -> Optional[sqlite3.Row]:
     return conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
 
 
+# --------------------------------------------------------------------------- #
+# Scoring pipeline: select work, write extract + score, mark failures
+# --------------------------------------------------------------------------- #
+def jobs_needing_score(
+    conn: sqlite3.Connection, profile_hash: str, *, limit: int, force: bool = False
+) -> list[sqlite3.Row]:
+    """Active jobs to score: those never scored for this profile hash, or all when forced."""
+    if force:
+        return conn.execute(
+            "SELECT * FROM jobs WHERE is_active = 1 ORDER BY id LIMIT ?", (limit,)
+        ).fetchall()
+    return conn.execute(
+        """
+        SELECT * FROM jobs
+        WHERE is_active = 1 AND (match_profile_hash IS NULL OR match_profile_hash != ?)
+        ORDER BY id LIMIT ?
+        """,
+        (profile_hash, limit),
+    ).fetchall()
+
+
+def save_job_extract(
+    conn: sqlite3.Connection, job_id: int, category: str, skills_json: str, language: str
+) -> None:
+    conn.execute(
+        "UPDATE jobs SET category = ?, skills_json = ?, language = ? WHERE id = ?",
+        (category, skills_json, language, job_id),
+    )
+
+
+def save_job_score(
+    conn: sqlite3.Connection, job_id: int, score: int, reasons_json: str, profile_hash: str
+) -> None:
+    conn.execute(
+        "UPDATE jobs SET match_score = ?, match_reasons_json = ?, match_profile_hash = ? WHERE id = ?",
+        (score, reasons_json, profile_hash, job_id),
+    )
+
+
+def mark_job_unscored(conn: sqlite3.Connection, job_id: int) -> None:
+    """Reset match columns so a job that failed scoring is retried on the next batch."""
+    conn.execute(
+        "UPDATE jobs SET match_score = NULL, match_reasons_json = NULL, match_profile_hash = NULL WHERE id = ?",
+        (job_id,),
+    )
+
+
 def query_jobs(
     conn: sqlite3.Connection,
     *,
