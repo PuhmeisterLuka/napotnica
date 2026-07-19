@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="card toolbar">
+  <form class="filters" method="get" action="{{ url_for('index') }}">
+    <label class="f-text">
+      <span>Search</span>
+      <input type="text" name="search" value="{{ filters.search or '' }}" placeholder="title or description">
+    </label>
+    <label class="f-text">
+      <span>Location</span>
+      <input type="text" name="location" value="{{ filters.location or '' }}" placeholder="e.g. Ljubljana">
+    </label>
+    <label>
+      <span>Category</span>
+      <select name="category">
+        <option value="">any</option>
+        {% for c in categories %}
+          <option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="f-num">
+      <span>Min score</span>
+      <input type="number" name="min_score" min="0" max="100" value="{{ filters.min_score if filters.min_score is not none else '' }}">
+    </label>
+    <label class="f-num">
+      <span>Min pay</span>
+      <input type="number" step="0.01" name="min_pay" value="{{ filters.min_pay if filters.min_pay is not none else '' }}">
+    </label>
+    <label>
+      <span>Sort</span>
+      <select name="sort">
+        <option value="score" {% if filters.sort == 'score' %}selected{% endif %}>score</option>
+        <option value="date" {% if filters.sort == 'date' %}selected{% endif %}>date</option>
+      </select>
+    </label>
+    <label class="f-check">
+      <input type="checkbox" name="hide_applied" value="1" {% if filters.hide_applied %}checked{% endif %}>
+      <span>Hide applied</span>
+    </label>
+    <label class="f-check">
+      <input type="checkbox" name="show_inactive" value="1" {% if filters.show_inactive %}checked{% endif %}>
+      <span>Show inactive</span>
+    </label>
+    <div class="f-buttons">
+      <button type="submit" class="btn">Filter</button>
+      <a class="btn ghost-btn" href="{{ url_for('index') }}">Reset</a>
+    </div>
+  </form>
+
+  <div class="actions">
+    <form method="post" action="{{ url_for('scrape_now', **request.args.to_dict()) }}">
+      <button type="submit" class="btn primary">Scrape now</button>
+    </form>
+    <form method="post" action="{{ url_for('score_now', **request.args.to_dict()) }}">
+      <button type="submit" class="btn primary">Score new jobs</button>
+    </form>
+    <a class="btn" href="{{ url_for('export_csv', **request.args.to_dict()) }}">Export CSV</a>
+    <a class="btn" href="{{ url_for('export_json', **request.args.to_dict()) }}">Export JSON</a>
+  </div>
+</section>
+
+<div id="status-strip" class="status-strip"
+     data-scrape-status="{{ scrape_run['status'] if scrape_run else 'none' }}"
+     data-score-running="{{ '1' if score_state.running else '0' }}">
+  {% if scrape_run and scrape_run['status'] == 'running' %}
+    <span class="dot"></span> Scraping in progress…
+  {% elif score_state.running %}
+    <span class="dot"></span> Scoring in progress…
+  {% elif scrape_run %}
+    Last scrape: {{ scrape_run['status'] }}
+    {%- if scrape_run['jobs_found'] is not none %}, {{ scrape_run['jobs_found'] }} found, {{ scrape_run['jobs_new'] }} new{% endif %}.
+    {% if score_state.result %} Last scoring: {{ score_state.result.scored }} scored, {{ score_state.result.failed }} failed.{% endif %}
+  {% else %}
+    No scrape yet.
+  {% endif %}
+</div>
+
+{% if jobs %}
+  <ol class="jobs">
+    {% for job in jobs %}
+      {% set chip = score_chip(job['match_score']) %}
+      <li class="card job {% if not job['is_active'] %}inactive{% endif %}">
+        <div class="job-row">
+          <span class="chip {{ chip.cls }}">{{ chip.text }}</span>
+          <a class="job-title" href="{{ url_for('job_detail', job_id=job['id']) }}">{{ job['title'] }}</a>
+        </div>
+        <div class="job-meta">
+          <span class="code">#{{ job['source_id'] }}</span>
+          {% if job['location'] %}<span>{{ job['location'] }}</span>{% endif %}
+          {% if job['category'] %}<span class="tag">{{ job['category'] }}</span>{% endif %}
+          <span class="pay">{{ job['pay_raw'] or '—' }}</span>
+          {% if job['applied_at'] %}<span class="tag applied">applied</span>{% endif %}
+          {% if not job['is_active'] %}<span class="tag">inactive</span>{% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <div class="card empty">
+    {% if scrape_run %}No jobs match these filters.{% else %}Nothing scraped yet. The button is right there.{% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

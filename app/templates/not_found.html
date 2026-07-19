@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Not found · napotnica{% endblock %}
+{% block content %}
+<div class="card empty">No such job. It may have been deactivated, or the id is wrong.</div>
+<a class="back" href="{{ url_for('index') }}">&larr; All jobs</a>
+{% endblock %}

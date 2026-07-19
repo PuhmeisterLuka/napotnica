@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Profile · napotnica{% endblock %}
+{% block content %}
+
+<article class="card detail">
+  <h2 class="detail-title">Profile</h2>
+
+  {% if error %}
+    <div class="flash error">{{ error }}</div>
+  {% else %}
+    <p class="note">Read-only. Editing happens in <span class="code">profile.yaml</span>.</p>
+
+    <dl class="extracted">
+      <div><dt>Name</dt><dd>{{ profile.name }}</dd></div>
+      {% if profile.contact.location %}<div><dt>Location</dt><dd>{{ profile.contact.location }}</dd></div>{% endif %}
+      {% if profile.contact.email %}<div><dt>Email</dt><dd>{{ profile.contact.email }}</dd></div>{% endif %}
+      {% if profile.contact.github %}<div><dt>GitHub</dt><dd>{{ profile.contact.github }}</dd></div>{% endif %}
+      <div><dt>CV language</dt><dd>{{ profile.cv_language }}</dd></div>
+    </dl>
+
+    {% if profile.skills %}
+      <h3 class="section-label">Skills</h3>
+      <p class="skills-line">{{ profile.skills|join(', ') }}</p>
+    {% endif %}
+
+    {% if profile.languages %}
+      <h3 class="section-label">Languages</h3>
+      <ul class="plain">
+        {% for l in profile.languages %}<li>{{ l.name }}{% if l.level %} &middot; {{ l.level }}{% endif %}</li>{% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if profile.experience %}
+      <h3 class="section-label">Experience</h3>
+      {% for e in profile.experience %}
+        <div class="entry">
+          <div class="entry-head"><strong>{{ e.role }}</strong>, {{ e.company }}{% if e.years %} <span class="code">{{ e.years }}</span>{% endif %}</div>
+          {% if e.bullets %}<ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% if profile.projects %}
+      <h3 class="section-label">Projects</h3>
+      {% for p in profile.projects %}
+        <div class="entry">
+          <div class="entry-head"><strong>{{ p.name }}</strong>{% if p.stack %} <span class="code">{{ p.stack|join(', ') }}</span>{% endif %}</div>
+          {% if p.bullets %}<ul>{% for b in p.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% if profile.education %}
+      <h3 class="section-label">Education</h3>
+      <ul class="plain">
+        {% for ed in profile.education %}<li>{{ ed.program }}{% if ed.program %}, {% endif %}{{ ed.school }}{% if ed.years %} <span class="code">{{ ed.years }}</span>{% endif %}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+</article>
+
+{% endblock %}

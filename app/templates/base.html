@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}napotnica{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header class="masthead">
+      <h1 class="wordmark">
+        <span class="ghost" aria-hidden="true">napotnica</span>
+        <span class="fore">napotnica</span>
+      </h1>
+      <div class="postmark" aria-hidden="true">
+        <span class="postmark-top">MARIBOR</span>
+        <span class="postmark-date">{{ today }}</span>
+      </div>
+      <nav class="topnav">
+        <a href="{{ url_for('index') }}">Jobs</a>
+        <a href="{{ url_for('profile_page') }}">Profile</a>
+      </nav>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flashes">
+          {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ job['title'] }} · napotnica{% endblock %}
+{% block content %}
+
+<a class="back" href="{{ url_for('index') }}">&larr; All jobs</a>
+
+<article class="card detail">
+  <h2 class="detail-title">{{ job['title'] }}</h2>
+
+  {% set chip = score_chip(job['match_score']) %}
+  <div class="detail-head">
+    <span class="chip {{ chip.cls }}">{{ chip.text }}</span>
+    <span class="code">#{{ job['source_id'] }}</span>
+    {% if job['location'] %}<span>{{ job['location'] }}</span>{% endif %}
+    <span class="pay">{{ job['pay_raw'] or '—' }}</span>
+    {% if not job['is_active'] %}<span class="tag">inactive</span>{% endif %}
+    {% if job['applied_at'] %}<span class="tag applied">applied</span>{% endif %}
+  </div>
+
+  {% if reasons.fits or reasons.gaps %}
+    <div class="reasons">
+      {% if reasons.fits %}
+        <div class="reason-col">
+          <h3>Fits</h3>
+          <ul>{% for f in reasons.fits %}<li>{{ f }}</li>{% endfor %}</ul>
+        </div>
+      {% endif %}
+      {% if reasons.gaps %}
+        <div class="reason-col">
+          <h3>Gaps</h3>
+          <ul>{% for g in reasons.gaps %}<li>{{ g }}</li>{% endfor %}</ul>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if job['category'] or skills or job['language'] %}
+    <dl class="extracted">
+      {% if job['category'] %}<div><dt>Category</dt><dd>{{ job['category'] }}</dd></div>{% endif %}
+      {% if skills %}<div><dt>Skills</dt><dd>{{ skills|join(', ') }}</dd></div>{% endif %}
+      {% if job['language'] %}<div><dt>Language</dt><dd>{{ job['language'] }}</dd></div>{% endif %}
+    </dl>
+  {% endif %}
+
+  {% if job['description'] %}
+    <div class="description">{{ job['description'] }}</div>
+  {% endif %}
+
+  <div class="detail-actions">
+    <form method="post" action="{{ url_for('job_applied', job_id=job['id']) }}">
+      <button type="submit" class="btn primary" {% if job['applied_at'] %}disabled{% endif %}>
+        {% if job['applied_at'] %}Applied{% else %}Mark applied{% endif %}
+      </button>
+    </form>
+    <a class="btn" href="{{ job['url'] }}" target="_blank" rel="noopener">Open original &#8599;</a>
+  </div>
+</article>
+
+{% endblock %}
