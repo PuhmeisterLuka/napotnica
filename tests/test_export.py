@@ -25,7 +25,7 @@ def conn():
 @pytest.fixture
 def jobs(conn):
     # Slovenian characters exercise the encoding; one scored, one applied, one bare.
-    repo.upsert_job(conn, make_listing("1", "RAČUNOVODSKA DELA", company="Črpalka d.o.o."), now="t")
+    repo.upsert_job(conn, make_listing("1", "RAČUNOVODSKA DELA", location="ČRNOMELJ"), now="t")
     repo.upsert_job(conn, make_listing("2", "POMOČ V KUHINJI"), now="t")
     conn.execute("UPDATE jobs SET category='IT', match_score=82 WHERE source_id='1'")
     conn.execute("UPDATE jobs SET applied_at='2026-07-16T00:00:00+00:00' WHERE source_id='2'")
@@ -43,7 +43,7 @@ def test_csv_has_bom_and_exact_columns(jobs):
 def test_csv_preserves_slovenian_and_values(jobs):
     text = export.to_csv_bytes(jobs).decode("utf-8-sig")
     assert "RAČUNOVODSKA DELA" in text
-    assert "Črpalka d.o.o." in text
+    assert "ČRNOMELJ" in text
     rows = list(__import__("csv").DictReader(text.splitlines()))
     by_id = {r["source_id"]: r for r in rows}
     assert by_id["1"]["match_score"] == "82"
@@ -59,8 +59,9 @@ def test_json_round_trips_with_timestamp(jobs):
     assert {j["source_id"] for j in payload["jobs"]} == {"1", "2"}
     job1 = next(j for j in payload["jobs"] if j["source_id"] == "1")
     assert job1["match_score"] == 82           # stays an int
-    assert job1["company"] == "Črpalka d.o.o."
+    assert job1["location"] == "ČRNOMELJ"
     assert set(job1.keys()) == set(export.CSV_COLUMNS)
+    assert "company" not in job1 and "region" not in job1
 
 
 def test_json_default_timestamp_present(jobs):

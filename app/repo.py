@@ -70,6 +70,17 @@ def get_job(conn: sqlite3.Connection, job_id: int) -> Optional[sqlite3.Row]:
     return conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
 
 
+def mark_applied(conn: sqlite3.Connection, job_id: int, now: str) -> None:
+    conn.execute("UPDATE jobs SET applied_at = ? WHERE id = ?", (now, job_id))
+
+
+def distinct_categories(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute(
+        "SELECT DISTINCT category FROM jobs WHERE category IS NOT NULL AND category != '' ORDER BY category"
+    ).fetchall()
+    return [r["category"] for r in rows]
+
+
 # --------------------------------------------------------------------------- #
 # Scoring pipeline: select work, write extract + score, mark failures
 # --------------------------------------------------------------------------- #
@@ -121,7 +132,7 @@ def query_jobs(
     conn: sqlite3.Connection,
     *,
     search: Optional[str] = None,
-    region: Optional[str] = None,
+    location: Optional[str] = None,
     category: Optional[str] = None,
     min_score: Optional[int] = None,
     min_pay: Optional[float] = None,
@@ -136,12 +147,16 @@ def query_jobs(
     if not show_inactive:
         where.append("is_active = 1")
     if search:
-        where.append("(title LIKE ? OR description LIKE ? OR company LIKE ?)")
+        where.append("(title LIKE ? OR description LIKE ?)")
         like = f"%{search}%"
-        params += [like, like, like]
-    if region:
-        where.append("region = ?")
-        params.append(region)
+        params += [like, like]
+    if location:
+        # Case-insensitive prefix match. Locations are stored uppercase, so uppercasing
+        # the term (Python handles Slovenian letters) catches every variant, e.g.
+        # "ljubljana" -> LJUBLJANA, LJUBLJANA RUDNIK. Escape LIKE wildcards in the term.
+        term = location.strip().upper().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        where.append("location LIKE ? ESCAPE '\\'")
+        params.append(term + "%")
     if category:
         where.append("category = ?")
         params.append(category)

@@ -18,9 +18,11 @@ from .db import now_iso
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXPORT_DIR = _PROJECT_ROOT / "exports"
 
+# company and region are never populated by this site, so they are left out of the
+# export (the db columns stay, unused). See the location note in repo.query_jobs.
 CSV_COLUMNS = [
-    "source_id", "title", "company", "location", "region", "pay_raw",
-    "pay_eur_hr", "url", "posted_at", "category", "match_score", "applied_at",
+    "source_id", "title", "location", "pay_raw", "pay_eur_hr",
+    "url", "posted_at", "category", "match_score", "applied_at",
 ]
 
 

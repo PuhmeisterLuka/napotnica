@@ -84,17 +84,26 @@ def test_filter_combinations(conn):
     repo.upsert_job(conn, make_listing(source_id="2", location="KRANJ", pay_eur_hr=15.0,
                                        title="RAZVOJ PROGRAMSKE OPREME"), now="t")
     repo.upsert_job(conn, make_listing(source_id="3", location="LJUBLJANA", pay_eur_hr=12.0), now="t")
-    conn.execute("UPDATE jobs SET region = 'Gorenjska' WHERE location = 'KRANJ'")
     conn.execute("UPDATE jobs SET match_score = 80 WHERE source_id = '2'")
     conn.execute("UPDATE jobs SET applied_at = 't' WHERE source_id = '1'")
 
-    assert {r["source_id"] for r in repo.query_jobs(conn, region="Gorenjska")} == {"1", "2"}
+    assert {r["source_id"] for r in repo.query_jobs(conn, location="kranj")} == {"1", "2"}
     assert {r["source_id"] for r in repo.query_jobs(conn, min_pay=12.0)} == {"2", "3"}
     assert {r["source_id"] for r in repo.query_jobs(conn, min_score=50)} == {"2"}
     assert {r["source_id"] for r in repo.query_jobs(conn, search="RAZVOJ")} == {"2"}
     assert {r["source_id"] for r in repo.query_jobs(conn, hide_applied=True)} == {"2", "3"}
-    # combined: Gorenjska AND min_pay 12 -> only job 2
-    assert {r["source_id"] for r in repo.query_jobs(conn, region="Gorenjska", min_pay=12.0)} == {"2"}
+    # combined: location prefix KRANJ AND min_pay 12 -> only job 2
+    assert {r["source_id"] for r in repo.query_jobs(conn, location="kranj", min_pay=12.0)} == {"2"}
+
+
+def test_location_prefix_matches_variants(conn):
+    for sid, loc in [("1", "LJUBLJANA"), ("2", "LJUBLJANA RUDNIK"), ("3", "KRANJ"), ("4", "ČRNOMELJ")]:
+        repo.upsert_job(conn, make_listing(source_id=sid, location=loc), now="t")
+    # prefix catches every Ljubljana variant, case-insensitively
+    assert {r["source_id"] for r in repo.query_jobs(conn, location="ljubljana")} == {"1", "2"}
+    assert {r["source_id"] for r in repo.query_jobs(conn, location="LJUB")} == {"1", "2"}
+    # Slovenian letters fold correctly (č -> Č)
+    assert {r["source_id"] for r in repo.query_jobs(conn, location="črnomelj")} == {"4"}
 
 
 def test_query_hides_inactive_by_default(conn):
