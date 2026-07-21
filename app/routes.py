@@ -17,8 +17,9 @@ from flask import (
 )
 
 from . import db as db_mod
-from . import export, matching, repo, scraper
+from . import cv, export, matching, repo, scraper
 from . import get_conn
+from .llm import LLMClient
 
 # --------------------------------------------------------------------------- #
 # Background tasks
@@ -26,7 +27,10 @@ from . import get_conn
 _lock = threading.Lock()
 _scrape_thread: threading.Thread | None = None
 _score_thread: threading.Thread | None = None
+_doc_thread: threading.Thread | None = None
 _score_state: dict = {"running": False, "result": None, "error": None}
+_doc_state: dict = {"running": False, "kind": None, "job_id": None,
+                    "cv_path": None, "note_text": None, "note_path": None, "error": None}
 
 
 def _start_scrape(app) -> bool:
@@ -43,6 +47,39 @@ def _start_scrape(app) -> bool:
 
         _scrape_thread = threading.Thread(target=work, daemon=True)
         _scrape_thread.start()
+        return True
+
+
+def _start_doc(app, job_id: int, kind: str) -> bool:
+    """Generate a CV (LLM + Playwright PDF) or a cover note, off the request thread."""
+    global _doc_thread
+    with _lock:
+        if _doc_thread and _doc_thread.is_alive():
+            return False
+        _doc_state.update(running=True, kind=kind, job_id=job_id,
+                          cv_path=None, note_text=None, note_path=None, error=None)
+
+        def work():
+            with app.app_context():  # cv rendering uses render_template
+                conn = db_mod.connect(app.config["DB_PATH"])
+                try:
+                    job = repo.get_job(conn, job_id)
+                    profile = matching.load_profile(app.config["PROFILE_PATH"])
+                    llm = LLMClient()
+                    if kind == "cv":
+                        result = cv.generate_cv(llm, profile, job)
+                        _doc_state.update(running=False, cv_path=str(result.pdf_path))
+                    else:
+                        text = cv.generate_cover_note(llm, profile, job)
+                        path = cv.write_cover_note(text, job["source_id"])
+                        _doc_state.update(running=False, note_text=text, note_path=str(path))
+                except Exception as exc:
+                    _doc_state.update(running=False, error=str(exc))
+                finally:
+                    conn.close()
+
+        _doc_thread = threading.Thread(target=work, daemon=True)
+        _doc_thread.start()
         return True
 
 
@@ -175,9 +212,27 @@ def register(app):
         job = repo.get_job(get_conn(), job_id)
         if job is None:
             return render_template("not_found.html"), 404
+        # only surface document results that belong to this job
+        doc = _doc_state if _doc_state.get("job_id") == job_id else None
         return render_template(
-            "job_detail.html", job=job, reasons=_reasons(job), skills=_skills(job)
+            "job_detail.html", job=job, reasons=_reasons(job), skills=_skills(job), doc=doc
         )
+
+    @app.post("/job/<int:job_id>/cv")
+    def job_cv(job_id):
+        started = _start_doc(current_app._get_current_object(), job_id, "cv")
+        flash("CV generation started." if started else "A document is already being generated.")
+        return redirect(url_for("job_detail", job_id=job_id))
+
+    @app.post("/job/<int:job_id>/note")
+    def job_note(job_id):
+        started = _start_doc(current_app._get_current_object(), job_id, "note")
+        flash("Cover note started." if started else "A document is already being generated.")
+        return redirect(url_for("job_detail", job_id=job_id))
+
+    @app.get("/api/doc/status")
+    def doc_status():
+        return _doc_state
 
     @app.post("/job/<int:job_id>/applied")
     def job_applied(job_id):

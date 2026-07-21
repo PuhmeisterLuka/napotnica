@@ -47,6 +47,12 @@
   {% endif %}
 
   <div class="detail-actions">
+    <form method="post" action="{{ url_for('job_cv', job_id=job['id']) }}">
+      <button type="submit" class="btn">Generate CV</button>
+    </form>
+    <form method="post" action="{{ url_for('job_note', job_id=job['id']) }}">
+      <button type="submit" class="btn">Generate cover note</button>
+    </form>
     <form method="post" action="{{ url_for('job_applied', job_id=job['id']) }}">
       <button type="submit" class="btn primary" {% if job['applied_at'] %}disabled{% endif %}>
         {% if job['applied_at'] %}Applied{% else %}Mark applied{% endif %}
@@ -55,5 +61,26 @@
     <a class="btn" href="{{ job['url'] }}" target="_blank" rel="noopener">Open original &#8599;</a>
   </div>
 </article>
+
+<div id="doc-strip" class="doc-strip" data-doc-running="{{ '1' if doc and doc.running else '0' }}">
+  {% if doc %}
+    {% if doc.running %}
+      <span class="dot"></span> Generating {{ 'CV' if doc.kind == 'cv' else 'cover note' }}…
+    {% elif doc.error %}
+      <div class="flash error">{{ doc.error }}</div>
+    {% elif doc.cv_path %}
+      <div class="card">
+        <h3 class="section-label">CV</h3>
+        <p class="note">Written to <span class="code">{{ doc.cv_path }}</span>. Read it before you send it.</p>
+      </div>
+    {% elif doc.note_text %}
+      <div class="card">
+        <h3 class="section-label">Cover note</h3>
+        <textarea class="note-text" rows="7" readonly>{{ doc.note_text }}</textarea>
+        <p class="note">Saved to <span class="code">{{ doc.note_path }}</span>.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
 
 {% endblock %}

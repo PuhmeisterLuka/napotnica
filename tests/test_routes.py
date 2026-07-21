@@ -100,6 +100,35 @@ def test_scrape_route_starts_background_without_network(client, monkeypatch):
     assert called["n"] == 1
 
 
+def test_cv_route_starts_background_without_llm_or_browser(client, monkeypatch, tmp_path):
+    from app import cv
+    from types import SimpleNamespace
+    monkeypatch.setattr(routes, "LLMClient", lambda: object())
+    monkeypatch.setattr(cv, "generate_cv",
+                        lambda llm, profile, job: SimpleNamespace(content=None, pdf_path=tmp_path / "cv.pdf"))
+    r = client.post("/job/1/cv")
+    assert r.status_code == 302
+    if routes._doc_thread:
+        routes._doc_thread.join(timeout=5)
+    assert routes._doc_state["error"] is None, routes._doc_state["error"]
+    assert routes._doc_state["cv_path"].endswith("cv.pdf")
+
+
+def test_note_route_stores_text_for_copy_paste(client, monkeypatch, tmp_path):
+    from app import cv
+    monkeypatch.setattr(routes, "LLMClient", lambda: object())
+    monkeypatch.setattr(cv, "generate_cover_note", lambda llm, profile, job: "Pozdravljeni, ...")
+    monkeypatch.setattr(cv, "OUTPUT_DIR", tmp_path)
+    r = client.post("/job/1/note")
+    assert r.status_code == 302
+    if routes._doc_thread:
+        routes._doc_thread.join(timeout=5)
+    assert routes._doc_state["error"] is None, routes._doc_state["error"]
+    assert routes._doc_state["note_text"] == "Pozdravljeni, ..."
+    # the note is shown on the detail page for copy-paste
+    assert b"Pozdravljeni" in client.get("/job/1").data
+
+
 def test_score_route_starts_background_without_network(client, monkeypatch):
     called = {"n": 0}
     monkeypatch.setattr(matching, "run_scoring",

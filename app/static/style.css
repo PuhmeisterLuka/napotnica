@@ -169,6 +169,16 @@ main > * + *{margin-top:1.25rem;}
 .entry-head{margin-bottom:.2rem;}
 .entry ul{margin:.2rem 0; padding-left:1.1rem;}
 
+/* ---- generated document strip ---- */
+.doc-strip{margin-top:1.25rem; font-family:'Space Mono',monospace; font-size:.8rem; color:var(--ink-soft);}
+.doc-strip .card{margin-top:.5rem;}
+.doc-strip .section-label{margin-top:0;}
+.note-text{
+  width:100%; font-family:'Manrope',sans-serif; font-size:.92rem; line-height:1.5;
+  background:var(--paper); color:var(--ink); border:1.5px solid var(--ink);
+  border-radius:var(--r); padding:.6rem .7rem; resize:vertical;
+}
+
 /* ---- empty ---- */
 .empty{font-family:'Space Mono',monospace; font-size:.92rem; color:var(--ink-soft);}
 

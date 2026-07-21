@@ -42,6 +42,25 @@
     setTimeout(tick, 1500);
   }
 
+  // Detail page: poll while a CV or cover note is being generated.
+  var docStrip = document.getElementById("doc-strip");
+  var docSawRunning = docStrip && docStrip.dataset.docRunning === "1";
+
+  function docTick() {
+    fetch("/api/doc/status").then(function (r) { return r.json(); }).then(function (s) {
+      if (s.running) {
+        docSawRunning = true;
+        setTimeout(docTick, 2000);
+      } else if (docSawRunning) {
+        window.location.reload();
+      }
+    }).catch(function () { setTimeout(docTick, 2000); });
+  }
+
+  if (docStrip && (docSawRunning || justStarted())) {
+    setTimeout(docTick, 1500);
+  }
+
   // Submit the filter form when a select or checkbox changes.
   var form = document.querySelector("form.filters");
   if (form) {

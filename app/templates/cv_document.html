@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="{{ profile.cv_language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ profile.name }}</title>
+<style>
+  @font-face{font-family:'Fraunces';font-style:normal;font-weight:600;font-display:block;src:url('{{ fonts_base }}/fraunces-600-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212;}
+  @font-face{font-family:'Fraunces';font-style:normal;font-weight:600;font-display:block;src:url('{{ fonts_base }}/fraunces-600-latinext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+1E00-1E9F,U+2C60-2C7F,U+A720-A7FF;}
+  @font-face{font-family:'Manrope';font-style:normal;font-weight:400;font-display:block;src:url('{{ fonts_base }}/manrope-400-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212;}
+  @font-face{font-family:'Manrope';font-style:normal;font-weight:400;font-display:block;src:url('{{ fonts_base }}/manrope-400-latinext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+1E00-1E9F,U+2C60-2C7F,U+A720-A7FF;}
+  @font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:block;src:url('{{ fonts_base }}/manrope-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212;}
+  @font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:block;src:url('{{ fonts_base }}/manrope-700-latinext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+1E00-1E9F,U+2C60-2C7F,U+A720-A7FF;}
+  @font-face{font-family:'Space Mono';font-style:normal;font-weight:400;font-display:block;src:url('{{ fonts_base }}/spacemono-400-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212;}
+  @font-face{font-family:'Space Mono';font-style:normal;font-weight:400;font-display:block;src:url('{{ fonts_base }}/spacemono-400-latinext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+1E00-1E9F,U+2C60-2C7F,U+A720-A7FF;}
+
+  /* A stranger reads this document: white, quiet, one rust accent. */
+  :root{ --ink:#221A12; --ink-soft:#5E4A36; --rust:#BE5A33; }
+  *{box-sizing:border-box;}
+  /* Margins come from page.pdf() (18mm); a CSS @page margin here would override it. */
+  @page{ size:A4; }
+  html,body{margin:0; padding:0; background:#fff;}
+  body{ font-family:'Manrope',sans-serif; font-size:10pt; line-height:1.45; color:var(--ink); }
+
+  .name{ font-family:'Fraunces',serif; font-weight:600; font-size:27pt; line-height:1.05; margin:0; }
+  .name .comma{ color:var(--rust); }
+  .contact{ font-family:'Space Mono',monospace; font-size:8.75pt; color:var(--ink-soft); margin:.35rem 0 0; }
+  .contact span + span::before{ content:'  ·  '; }
+
+  .section{ margin-top:14pt; }
+  .section-label{
+    font-family:'Space Mono',monospace; font-size:8pt; font-weight:400;
+    text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft);
+    margin:0 0 4pt; padding-bottom:3pt; border-bottom:2px solid var(--rust);
+  }
+  .summary{ margin:0; }
+
+  .entry{ margin-bottom:8pt; }
+  .entry:last-child{ margin-bottom:0; }
+  .entry-head{ display:flex; justify-content:space-between; align-items:baseline; gap:1rem; }
+  .entry-title{ font-weight:700; }
+  .entry-meta{ font-family:'Space Mono',monospace; font-size:8.5pt; color:var(--ink-soft); white-space:nowrap; }
+  ul{ margin:2pt 0 0; padding-left:12pt; }
+  li{ margin-bottom:1pt; }
+  .skills-line{ margin:0; }
+</style>
+</head>
+<body>
+
+  <h1 class="name">{{ profile.name }}<span class="comma">,</span></h1>
+  <p class="contact">
+    {% if profile.contact.location %}<span>{{ profile.contact.location }}</span>{% endif %}
+    {% if profile.contact.email %}<span>{{ profile.contact.email }}</span>{% endif %}
+    {% if profile.contact.phone %}<span>{{ profile.contact.phone }}</span>{% endif %}
+    {% if profile.contact.github %}<span>{{ profile.contact.github }}</span>{% endif %}
+  </p>
+
+  {% if summary %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.summary }}</h2>
+    <p class="summary">{{ summary }}</p>
+  </section>
+  {% endif %}
+
+  {% if experience %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.experience }}</h2>
+    {% for e in experience %}
+      <div class="entry">
+        <div class="entry-head">
+          <span class="entry-title">{{ e.role }}, {{ e.company }}</span>
+          {% if e.years %}<span class="entry-meta">{{ e.years }}</span>{% endif %}
+        </div>
+        {% if e.bullets %}<ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if projects %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.projects }}</h2>
+    {% for p in projects %}
+      <div class="entry">
+        <div class="entry-head">
+          <span class="entry-title">{{ p.name }}</span>
+          {% if p.stack %}<span class="entry-meta">{{ p.stack|join(' · ') }}</span>{% endif %}
+        </div>
+        {% if p.bullets %}<ul>{% for b in p.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if profile.education %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.education }}</h2>
+    {% for ed in profile.education %}
+      <div class="entry">
+        <div class="entry-head">
+          <span class="entry-title">{{ ed.program or ed.school }}</span>
+          {% if ed.years %}<span class="entry-meta">{{ ed.years }}</span>{% endif %}
+        </div>
+        {% if ed.program %}<div>{{ ed.school }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if skills %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.skills }}</h2>
+    <p class="skills-line">{{ skills|join(' · ') }}</p>
+  </section>
+  {% endif %}
+
+  {% if profile.languages %}
+  <section class="section">
+    <h2 class="section-label">{{ labels.languages }}</h2>
+    <p class="skills-line">
+      {%- for l in profile.languages %}{{ l.name }}{% if l.level %} ({{ l.level }}){% endif %}{% if not loop.last %} · {% endif %}{% endfor -%}
+    </p>
+  </section>
+  {% endif %}
+
+</body>
+</html>
