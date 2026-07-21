@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # --------------------------------------------------------------------------- #
@@ -72,3 +72,42 @@ class JobScore(BaseModel):
     score: int = Field(ge=0, le=100)
     fits: list[str] = Field(min_length=1)
     gaps: list[str] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- #
+# CV + cover note
+# --------------------------------------------------------------------------- #
+class CVExperience(BaseModel):
+    """An experience entry chosen from the profile, identified by its company."""
+    company: str
+    bullets: list[str] = Field(default_factory=list)
+
+
+class CVProject(BaseModel):
+    """A project chosen from the profile, identified by its name."""
+    name: str
+    bullets: list[str] = Field(default_factory=list)
+
+
+class CVContent(BaseModel):
+    """What the model may decide: which entries, in what order, reworded.
+
+    Roles, years, schools and contact details are never taken from the model; they
+    are rendered straight from profile.yaml, so they cannot be invented.
+    """
+    summary: str
+    experience: list[CVExperience] = Field(default_factory=list, max_length=3)
+    projects: list[CVProject] = Field(default_factory=list, max_length=3)
+    skills: list[str] = Field(default_factory=list)
+
+
+class CoverNote(BaseModel):
+    note: str
+
+    @field_validator("note")
+    @classmethod
+    def _at_most_120_words(cls, v: str) -> str:
+        words = len(v.split())
+        if words > 120:
+            raise ValueError(f"cover note must be 120 words or fewer, got {words}")
+        return v
