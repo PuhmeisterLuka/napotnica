@@ -16,8 +16,9 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+from dotenv import load_dotenv
 
-from . import repo
+from . import db, repo
 from .llm import LLMClient
 from .schemas import JobExtract, JobScore, Profile
 
@@ -170,3 +171,13 @@ def run_scoring(
         conn, profile_summary=summary, profile_hash=fingerprint,
         llm=llm, max_batch=max_batch, force=force,
     )
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    conn = sqlite3.connect(str(db.DEFAULT_DB_PATH))
+    conn.row_factory = sqlite3.Row
+    result = run_scoring(conn)
+    conn.commit()
+    print(result)
+    conn.close()
