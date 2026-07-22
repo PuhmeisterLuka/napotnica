@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 from pathlib import Path
@@ -19,6 +20,8 @@ import yaml
 from . import repo
 from .llm import LLMClient
 from .schemas import JobExtract, JobScore, Profile
+
+logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PROFILE_PATH = _PROJECT_ROOT / "profile.yaml"
@@ -140,8 +143,9 @@ def score_new_jobs(
             reasons = json.dumps({"fits": result.fits, "gaps": result.gaps}, ensure_ascii=False)
             repo.save_job_score(conn, job["id"], result.score, reasons, profile_hash)
             scored += 1
-        except Exception:
+        except Exception as exc:
             # One poisoned listing must never kill the batch.
+            logger.warning("scoring failed for job %s: %s", job["id"], exc)
             repo.mark_job_unscored(conn, job["id"])
             failed += 1
     conn.commit()

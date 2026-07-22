@@ -70,7 +70,7 @@ class JobExtract(BaseModel):
 class JobScore(BaseModel):
     """Stage B: how well the profile matches the job."""
     score: int = Field(ge=0, le=100)
-    fits: list[str] = Field(min_length=1)
+    fits: list[str] = Field(default_factory=list)
     gaps: list[str] = Field(default_factory=list)
 
 
