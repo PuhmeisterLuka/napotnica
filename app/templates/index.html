@@ -68,14 +68,23 @@
     <span class="dot"></span> Scraping in progress…
   {% elif score_state.running %}
     <span class="dot"></span> Scoring in progress…
-  {% elif scrape_run %}
-    Last scrape: {{ scrape_run['status'] }}
-    {%- if scrape_run['jobs_found'] is not none %}, {{ scrape_run['jobs_found'] }} found, {{ scrape_run['jobs_new'] }} new{% endif %}.
-    {% if score_state.result %} Last scoring: {{ score_state.result.scored }} scored, {{ score_state.result.failed }} failed.{% endif %}
   {% else %}
-    No scrape yet.
+    {%- if scrape_run -%}
+      Last scrape: {{ scrape_run['status'] }}
+      {%- if scrape_run['jobs_found'] is not none %}, {{ scrape_run['jobs_found'] }} found, {{ scrape_run['jobs_new'] }} new{% endif %}.
+    {%- else -%}
+      No scrape yet.
+    {%- endif %}
+    {% if score_state.result %} Last scoring: {{ score_state.result.scored }} scored, {{ score_state.result.failed }} failed.{% endif %}
   {% endif %}
 </div>
+
+{% if scrape_run and scrape_run['status'] == 'failed' and scrape_run['error'] %}
+  <div class="flash error">Scrape failed: {{ scrape_run['error'] }}</div>
+{% endif %}
+{% if score_state.error %}
+  <div class="flash error">Scoring failed: {{ score_state.error }}</div>
+{% endif %}
 
 {% if jobs %}
   <ol class="jobs">
